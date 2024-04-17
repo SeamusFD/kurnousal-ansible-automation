@@ -1,0 +1,32 @@
+---
+- hosts: all
+  become: true
+  tasks:
+    - name: check if rust is installed
+      shell: cargo -v
+      register: rust_exists
+      ignore_errors: true
+    - name: ensure log folders exist
+      when: rust_exists is failed
+      file:
+        path: /home/ansible/logs/rust
+        state: directory
+        owner: ansible
+        group: ansible_admin
+        recurse: yes
+    - name: rustup shell script download
+      when: rust_exists is failed
+      get_url:
+        url: https://sh.rustup.rs
+        dest: /tmp/sh.rustup.rs
+        mode: "0755"
+        force: "yes"
+      tags:
+        - rust
+    - name: install process for rust toolchain (targets default stable)
+      when: rust_exists is failed
+      shell: /tmp/sh.rustup.rs -y >> rust_install.log
+      args:
+        chdir: /home/ansible/logs/rust
+      tags:
+        - rust
